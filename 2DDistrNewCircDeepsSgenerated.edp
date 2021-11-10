@@ -1,0 +1,254 @@
+include "ffmatlib.idp"
+load "msh3" 
+load "medit"
+
+int lb1=99, lb2=98, lb3=97, lb4=96;// could be anything such that 6= 0 and C1 6= C2
+int lbSq1=1, lbSq2=2, lbSq3=3, lbSq4=4;
+
+//string nameHM,fnameHM;
+
+for(int indD=20; indD<=20; indD++) {
+//int indD=11; 
+for (int indShX =20; indShX<=20; indShX=indShX+1) {
+ int indShY=20;
+ string nameShX = indShX, nameShY = indShY;
+
+ string nameD = indD;	
+ string fnameHM="DeepCircIndD"+nameD+"ShX"+nameShX+"ShY"+nameShY+".dat" ;
+ ofstream f(fnameHM);
+ 
+ real x0=-indD*0.1, x1=-x0;
+ real y0= 4.0, y1=-y0, RmaxX=4,RmaxY=4.0,Rmax=4, xBoundary=0.01*indD;
+ 
+//border a(t=0, 2*pi){x=RmaxX*cos(t); y=RmaxY*sin(t); label=1;}
+//mesh Th = buildmesh(a(300) );
+//plot(Th, WindowIndex=0);
+
+int indR=100;
+string nameR=indR;
+real Rlarge=0.1*indR;
+real Rsmall=0.50;
+
+border a1(t=-Rlarge, -Rsmall){x=t; y=(Rlarge^2-t^2)^(0.5); label=1;}
+
+border b1(t=-Rsmall,0){x=t; y=-(Rsmall^2-t^2)^(0.5) + (Rlarge^2-Rsmall^2)^(0.5); label=3;}
+
+border b11(t=0,Rsmall){x=t; y=-(Rsmall^2-t^2)^(0.5) + (Rlarge^2-Rsmall^2)^(0.5); label=31;}
+
+
+border a2(t=Rsmall,Rlarge){x=t; y=(Rlarge^2-t^2)^(0.5); label=5;}
+
+border a4(t=Rlarge,Rsmall){x=t; y=-(Rlarge^2-t^2)^(0.5); label=6;}
+
+border b2(t=Rsmall,-0){x=t; y=(Rsmall^2-t^2)^(0.5) - (Rlarge^2-Rsmall^2)^(0.5); label=41;}
+
+border b21(t=0,-Rsmall){x=t; y=(Rsmall^2-t^2)^(0.5) - (Rlarge^2-Rsmall^2)^(0.5); label=4;}
+
+
+border a3(t=-Rsmall, -Rlarge){x=t; y=-(Rlarge^2-t^2)^(0.5); label=2;}
+
+plot(a1(50)+ b1(30) + a2(50) + a4(50) + b2(30) + a3(50)); //to see a plot of the border mesh
+
+mesh Th = buildmesh(a1(-50)+ b1(-10) +  b11(-10) + a2(-50) + a4(-50) + b2(-10) + b21(-10)+ a3(-50));
+
+ fespace Vh(Th,P2);
+
+Vh rDeepUp= (x^2 + (y - (Rlarge^2-Rsmall^2)^(0.5))^2 )^(0.5), 
+rDeepDown= (x^2 + (y + (Rlarge^2-Rsmall^2)^(0.5))^2 )^(0.5); 
+ 
+Vh r=(x^2 + y^2 )^(0.5);
+
+Vh normUpX= x/rDeepUp, normUpY= (y - (Rlarge^2-Rsmall^2)^(0.5))/rDeepUp;
+Vh normDownX= x/rDeepDown, normDownY= (y + (Rlarge^2-Rsmall^2)^(0.5))/rDeepDown;
+
+Vh normX= x/r, normY= y/r;
+
+
+/////////////////////////////////////
+
+ real pi=3.14159265359, rgR, rgIm, lgR, lgIm;
+ real StepHM=0.10*pi/(2*x0*y0), HM, T=0.1, h=100,  
+core=0.5, Diff=1.0, width=0.5;
+
+ real shX=-0.1*indShX, shY=-0.1*indShY;
+
+Vh xSh=x-shX,ySh=y-shY, 
+Mx= -ySh/(xSh^2+ySh^2+core^2)^(0.5), 
+My = xSh/(xSh^2+ySh^2+core^2)^(0.5), 
+Mz = (1- My^2-Mx^2)^(0.5);
+
+//My=0;
+//Mx=1;
+
+fnameHM="SFDeepCircIndD"+nameD+"ShX"+nameShX+"ShY"+nameShY+"R"+nameR+"_dataM.txt" ;   
+ffSaveData2(Mx,My,fnameHM);
+
+Vh Rsh=(xSh^2+ySh^2)^(0.5), R=(x^2+y^2)^(0.5), 
+RshSmoot=(xSh^2+ySh^2+core^2 )^(0.5) ;
+
+/////////////////////////////////////////
+Vh SourceUp = ySh*normUpX- xSh*normUpY, SourceDown = ySh*normDownX- xSh*normDownY;   
+Vh SourceDeep=(SourceUp+SourceDown)/Rsh^2;
+
+Vh SourceLarge= (ySh*normX- xSh*normY)/Rsh^2;
+ 
+ int indHM;
+ //string nameHM,fnameHM;
+
+Vh Ax, Ay, jr, djx , rgIm1, lgR1, lgIm1;
+
+Vh Curr=0;
+Vh omega;
+real omega1;
+
+//////////////////////////////////
+
+
+real Delta=1.760, dF=0.5;
+real Pzr=0.0, Pzl=0.0, gammal=-0.00; 
+
+real Phase=1;
+
+Vh vR0 ,vR1, uR0, uR1,vIM0, uR ;
+int n=0;
+
+for ( n=0; n<=20; n++) { 
+
+omega=(2*n+1)*pi*T +0.250*2*pi ;
+ omega1=(2*n+1)*pi*T;
+
+
+
+
+//rgR1 = sh*y/(Rmax*RshSmoot^2);
+Vh  fedge1= 0*y*(cosh((x+xBoundary)/width))^(-2) /(RshSmoot^2*width) ;
+Vh  fedge2=  - 0*Phase* y*(cosh((x-xBoundary)/width))^(-2) /(RshSmoot^2*width) ;
+Vh fedge=(fedge1+fedge2);
+Vh fh=fedge;
+
+width=0.01;
+
+Vh Window1=(Delta/( Delta^2+omega1^2)^(0.5))*( 1-tanh((x+xBoundary)/width) )/2;
+
+Vh Window2=(Delta/( Delta^2+omega1^2)^(0.5))*( 1+tanh((x-xBoundary)/width) )/2;
+
+ Window1=(Delta/( Delta^2+omega1^2)^(0.5));
+
+ Window2=(Delta/( Delta^2+omega1^2)^(0.5));
+
+Window1=1;
+Window2=1;
+
+
+///////////////////////////////////
+
+Vh rgR1 = (Window1)*( SourceDeep ) ;
+
+Vh rgR2 = Phase*(Window2)*( SourceDeep) ;
+
+Vh rgR3 = (Window1)*( SourceLarge ) ;
+
+Vh rgR4 = Phase*(Window2)*( SourceLarge ) ;
+
+///////////////////////////////////////
+
+ solve Usadel([uR0],[vR0])= 
+int2d(Th)(( dx(uR0)*dx(vR0) + dy(uR0)*dy(vR0)) )
+///////////
++ int2d(Th)(2*(omega1^2 + Delta^2 )^(0.5)*( uR0*vR0 )/(2*pi) ) + int2d(Th)(0*Rsh^(-2)*( uR0*vR0 ) )  
++ int2d(Th)( (fedge1)*vR0)
+///////////
++ int1d(Th,3)(rgR1*vR0) + int1d(Th,4)(rgR1*vR0)
++ int1d(Th,1)(rgR3*vR0) + int1d(Th,2)(rgR3*vR0);
+
+/////////////////////////////////////////7
+
+ solve Usadel1([uR1],[vR0])= 
+int2d(Th)( (dx(uR1)*dx(vR0) + dy(uR1)*dy(vR0)) )
+///////////
++ int2d(Th)(2*(omega1^2 + Delta^2 )^(0.5)*( uR1*vR0 )/(2*pi)) + int2d(Th)(0*Rsh^(-2)*( uR1*vR0 ) )  
++ int2d(Th)( (fedge2)*vR0)
+///////////
++ int1d(Th,31)(rgR2*vR0) + int1d(Th,41)(rgR2*vR0) 
++ int1d(Th,5)(rgR4*vR0) + int1d(Th,6)(rgR4*vR0)  ;
+
+//////////////////////////////////////
+
+Vh uR0S,uR1S;
+
+ solve UsadeFl([uR0S],[vR0])= 
+int2d(Th)( ( dx(uR0S)*dx(vR0) + dy(uR0S)*dy(vR0)) )
+///////////
++ int2d(Th)(2*omega*( uR0S*vR0 )/(2*pi) ) + int2d(Th)(0*Rsh^(-2)*( uR0*vR0 ) )  
++ int2d(Th)( (uR0)*vR0/dF);
+///////////
+
+/////////////////////////////////////////7
+
+ solve UsadelF1([uR1S],[vR0])= 
+int2d(Th)( (dx(uR1S)*dx(vR0) + dy(uR1S)*dy(vR0)) )
+///////////
++ int2d(Th)(2*omega*( uR1S*vR0 )/(2*pi) ) + int2d(Th)(0*Rsh^(-2)*( uR1*vR0 ) )  
++ int2d(Th)( (uR1)*vR0/dF);
+
+
+Curr=Curr + dF*(2*pi)^(0.5)* pi*T* ( dx(uR1S)*uR0S - dx(uR0S)*uR1S)*(Delta/( Delta^2+omega1^2)^(0.5))^2 ;
+
+
+////////////////////////////////////////////////
+
+ solve Usadel2([uR],[vR0])= 
+int2d(Th)( dx(uR)*dx(vR0) + dy(uR)*dy(vR0) )
+///////////
++ int2d(Th)(2*(omega1^2 + Delta^2 )^(0.5)*( uR*vR0 )/(2*pi) ) + int2d(Th)(0*Rsh^(-2)*( uR*vR0 ) )  
+///////////
++ int1d(Th,3)(rgR1*vR0) + int1d(Th,4)(rgR1*vR0)
++ int1d(Th,1)(rgR3*vR0) + int1d(Th,2)(rgR3*vR0)
++ int1d(Th,31)(rgR2*vR0) + int1d(Th,41)(rgR2*vR0) 
++ int1d(Th,5)(rgR4*vR0) + int1d(Th,6)(rgR4*vR0)  ;
+
+Vh uR2;
+
+ solve Usade3([uR2],[vR0])= 
+int2d(Th)( dx(uR2)*dx(vR0) + dy(uR2)*dy(vR0) )
+///////////
++ int2d(Th)(2*omega*( uR2*vR0 )/(2*pi) ) + int2d(Th)(0*Rsh^(-2)*( uR*vR0 ) )  
+- int2d(Th)( (uR)*vR0/dF) ;
+/////////// ;
+
+//uR=uR0+uR1;
+
+  
+if ( n==0) {
+
+plot(uR0, wait=true);
+
+fnameHM="SFDeepCircIndD"+nameD+"ShX"+nameShX+"ShY"+nameShY+"R"+nameR+"_mesh.msh" ;
+savemesh(Th,fnameHM);
+
+fnameHM="SFDeepCircIndD"+nameD+"ShX"+nameShX+"ShY"+nameShY+"R"+nameR+"_vh.txt" ;
+ffSaveVh(Th,Vh,fnameHM);
+
+//////////////////////
+
+fnameHM="SFDeepCircIndD"+nameD+"ShX"+nameShX+"ShY"+nameShY+"R"+nameR+"S_dataU.txt" ;
+ffSaveData(uR,fnameHM);
+
+fnameHM="SFDeepCircIndD"+nameD+"ShX"+nameShX+"ShY"+nameShY+"R"+nameR+"F_dataU.txt" ;
+ffSaveData(uR2,fnameHM);
+
+//fnameHM="SFDeepCircIndD"+nameD+"ShX"+nameShX+"ShY"+nameShY+"R"+nameR+"Sum_dataU.txt" ;
+ //Vh uSum=uR1+uR0;
+//ffSaveData(uSum,fnameHM);
+
+///////////////////
+}
+
+}
+fnameHM="SFDeepCircIndD"+nameD+"ShX"+nameShX+"ShY"+nameShY+"R"+nameR+"_dataCurr.txt" ;
+ffSaveData(Curr,fnameHM);
+
+} // Phi
+
+     } // shift
+
